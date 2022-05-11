@@ -8,8 +8,12 @@ from flask import Flask , request, jsonify,render_template
 import numpy as np
 import scipy
 
+from tensorflow.keras.models import load_model
 
-def image_preprocessing(result):
+import os
+
+
+def image_preprocessing(result,int_position):
         # strip the result
         with urlopen(result) as response:
                 result = response.read()
@@ -20,9 +24,14 @@ def image_preprocessing(result):
 
         # make pillow image object
         arr = Image.fromarray(arr)
+
+        #crop image to fit the digit to the whole
+        #arr = arr.crop((int_position[0], int_position[1], int_position[2], int_position[3]))
+
         # resize images to 28,28
         arr = arr.resize((28, 28))
 
+        #arr.show()
         # make white background png
         arr = arr.convert("RGBA")
         arr1 = Image.new("RGBA", arr.size, "WHITE")
@@ -35,14 +44,19 @@ def image_preprocessing(result):
         arr = PIL.ImageOps.invert(arr)
         # make numpy image array
         n_arr = np.array(arr)
-        n_arr = n_arr.reshape(784)
+        #convert into float
+        n_arr = n_arr.astype(float)
+        # normalize
+        n_arr= n_arr/255.0
+        n_arr = n_arr.reshape(1,28,28,1)
         #inteoduce comma seperated as mnist data set
-        n_arr=list(n_arr)
+       # n_arr=list(n_arr)
 
         return n_arr
 
 app = Flask(__name__)
 trained_model=load("ml_model/best_KNN_clf")
+cnn_model = load_model("ml_model/cnn_mnist_digit.h5")
 @app.route("/")
 def index():
 
@@ -50,14 +64,40 @@ def index():
 
 @app.route("/predict",methods=['post'])
 def predict():
+        try:
+                #get uri from javascript canvas as result
+                result=request.form.get('text')
+                position = request.form.get('text_two')
 
-        #get uri from javascript canvas as result
-        result=request.form.get('text')
-        #preprocessing
-        n_arr=image_preprocessing(result)
-        predicted_number = trained_model.predict([n_arr])
+                position= position.split(',')
+                int_position=[]
+                for item in position:
+                        print(item)
+                        item=int(item)
 
-        return render_template('index.html',a="PREDICTED NUMBER = {}".format(predicted_number[0]))
+                        int_position.append(item)
+                #try to fix outside of the canvas line
+                if int_position[0] <0:
+                        int_position[0]=0
+                if int_position[1] <0:
+                        int_position[1]=0
+                if int_position[2] >300:
+                        int_position[2]=300
+                if int_position[3] >300:
+                        int_position[3]=300
+               # print(int_position)
+                #preprocessing
+                n_arr=image_preprocessing(result,int_position)
+                #predicted_number = trained_model.predict([n_arr])
+                predicted_number = cnn_model.predict([n_arr])
+                predicted_number = np.argmax(predicted_number)
+
+       # return render_template('index.html',a="PREDICTED NUMBER = {}".format(predicted_number[0]))
+
+                return render_template('index.html',a="PREDICTED NUMBER = {}".format(predicted_number))
+        except:
+                return render_template('index.html', a="NO INPUT IS GIVEN")
+
 
 @app.route("/about")
 def about():

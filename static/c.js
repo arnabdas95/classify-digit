@@ -2,8 +2,14 @@
 // to load, then performs the operations.
 // This is considered best practice.
 document.getElementById("text").style.display = "none";
+document.getElementById("text_two").style.display = "none";
 
+ let xyposition=[];
+ let i =0;
+ let minx=miny=300;
+ let maxx=maxy=0;
 window.addEventListener('load', ()=>{
+
 
 	resize(); // Resizes the canvas once the window loads
 	document.addEventListener('mousedown', startPainting);
@@ -52,7 +58,7 @@ function sketch(event){
 if (!paint) return;
 ctx.beginPath();
 
-ctx.lineWidth = 30;
+ctx.lineWidth = 15;
 
 // Sets the end of the lines drawn
 // to a round shape.
@@ -72,6 +78,19 @@ getPosition(event);
 // A line is traced from start
 // coordinate to this coordinate
 ctx.lineTo(coord.x , coord.y);
+//store x and y coordinate
+
+
+let posx=coord.x;
+let posy=coord.y;
+if (posx>maxx){maxx=posx;}
+if (posy>maxy){maxy=posy;}
+if (posx<minx){minx=posx;}
+if( posy<miny){miny=posy;}
+
+
+//instead of ctx.lineWidth/2 use only width as I want to padding some area
+xyposition=[minx-ctx.lineWidth,miny-ctx.lineWidth,maxx+ctx.lineWidth,maxy+ctx.lineWidth];
 
 // Draws the line.
 ctx.stroke();
@@ -82,8 +101,12 @@ ctx.stroke();
  function submitForm() {
      //document.getElementById("show_result").style.display='block';
     var pixel = document.getElementById('myCanvas');
+
     var img_pixel_data = pixel.toDataURL();
  document.getElementById('text').value=img_pixel_data;
+ document.getElementById('text_two').value=xyposition;
+ console.log(xyposition);
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById("form").submit();
     }
